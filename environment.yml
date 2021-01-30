@@ -1,0 +1,10 @@
+name: aws
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.7
+  - s3fs
+  - xarray
+  - netcdf4
+prefix: /Users/leecarlaw/anaconda3/envs/aws
