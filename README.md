@@ -28,5 +28,7 @@ conda env create --name envname --file environment.yml
 ```
 
 ## Code execution
+### Download satellite netCDF data
+The following will download all 16 channels from the GOES-16 archive on the AWS and reduce the domain to the latitude/longitude box defined by the `dbox` flag:
 
 `python get_goes.py YYYY-mm-dd/HHMM YYYY-mm-dd/HHMM -p /Users/leecarlaw/satellite_data/summer_wes -b all -dbox '-96 37 -82 47'`

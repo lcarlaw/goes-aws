@@ -3,24 +3,17 @@
 """
 In order to save space on the local filesystem, this script will trim the CONUS
 domain data to a user-specified domain. These domains are currently specified
-in .utils/mapinfo.py within the domains dictionary.
+in .utils/mapinfo.py within the domains dictionary. Alternatively, the user can pass
+a bounding box via the dbox flag.
 
 Useage
 ------
-*Note* you may have to run chmod u+x domain_reduce.py first.
+*Note* you may have to run chmod +x domain_reduce.py first.
 
-./domain_reduce.py -d domain -f [/path/to/individual/file.nc] -p [/path/to/entire/directory]
+./domain_reduce.py -d [domain] -dbox ['LonW LatS LonE LatN'] -f [/path/to/individual/file.nc] -p [/path/to/entire/directory]
 
--d flag is required and defined in the domains dictionary in .utils/mapinfo.py.
+Either a -d or -dbox flag is required, but not both.
 Either a -f or -p flag is required, but not both.
-
-Required Libraries
-------------------
-conda install xarray
-conda install netcdf4
-
-This has been tested on Python 3+ but *should* work with Python 2 as well,
-although no guarantees are made.
 """
 
 from __future__ import print_function

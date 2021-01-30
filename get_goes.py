@@ -3,7 +3,7 @@
 #
 # Useage:
 #   conda activate goes [s3fs install]
-#   python get_goes.py -s 2020052312 -e 2020052403 -p /Users/leecarlaw/satellite/20200524 -b 2,5,10 -d MW
+#   python get_goes.py 2020-05-23/1200 -e 2020-05-24-/0300 -p /Users/leecarlaw/satellite/20200524 -b 2,5,10 -d MW
 #
 # Output:
 #   netcdf files downloaded to -p for bands 2, 5, and 10, as well as GLM data.
@@ -28,12 +28,12 @@ try:
 except ImportError:
     from distutils.spawn import find_executable as which
 
-# Logic to find wget or curl on the system
-WGET = which('wget')
-if not WGET:
-    CURL = which('curl')
-if not WGET and not CURL:
-    raise ValueError("Neither wget nor curl found on the system. Exiting")
+# Logic to find wget or curl on the system. Only needed for < Goe 16
+#WGET = which('wget')
+#if not WGET:
+#    CURL = which('curl')
+#if not WGET and not CURL:
+#    raise ValueError("Neither wget nor curl found on the system. Exiting")
 
 #[OI][RT]_ABI-L2-\w{4}(C|F|M1|M2)-M\dC%s_G\d\d_s\d{14}_e\d{14}_c\d{14}.nc
 regex_str = "_s([\d]{14})"
