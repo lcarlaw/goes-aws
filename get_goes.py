@@ -1,9 +1,8 @@
-#
 # get_goes.py
 #
 # Useage:
-#   conda activate goes [s3fs install]
 #   python get_goes.py 2020-05-23/1200 -e 2020-05-24-/0300 -p /Users/leecarlaw/satellite/20200524 -b 2,5,10 -d MW
+#   python get_goes.py YYYY-mm-dd/HHMM YYYY-mm-dd/HHMM -p /Users/leecarlaw/satellite_data/summer_wes -b all
 #
 # Output:
 #   netcdf files downloaded to -p for bands 2, 5, and 10, as well as GLM data.
@@ -29,16 +28,42 @@ except ImportError:
     from distutils.spawn import find_executable as which
 
 # Logic to find wget or curl on the system. Only needed for < Goe 16
-#WGET = which('wget')
-#if not WGET:
-#    CURL = which('curl')
-#if not WGET and not CURL:
-#    raise ValueError("Neither wget nor curl found on the system. Exiting")
+WGET = which('wget')
+if not WGET:
+    CURL = which('curl')
+if not WGET and not CURL:
+    raise ValueError("Neither wget nor curl found on the system. Exiting")
 
 #[OI][RT]_ABI-L2-\w{4}(C|F|M1|M2)-M\dC%s_G\d\d_s\d{14}_e\d{14}_c\d{14}.nc
 regex_str = "_s([\d]{14})"
-def grab_data(start_time, end_time, local_path=None, bands=None, glm=None, domain=None,
-              domain_box=None):
+metadata = {
+    'econus': {
+        'sat_num': 16,
+        'domain': 'C',
+    },
+    'emeso-1': {
+        'sat_num': 16,
+        'domain': 'M1',
+    },
+    'emeso-2': {
+        'sat_num': 16,
+        'domain': 'M2',
+    },
+    'wconus': {
+        'sat_num': 17,
+        'domain': 'C',
+    },
+    'wmeso-1': {
+        'sat_num': 17,
+        'domain': 'M1',
+    },
+    'wmeso-2': {
+        'sat_num': 17,
+        'domain': 'M2',
+    },
+}
+def get_data_aws(start_time, end_time, local_path=None, bands=None, glm=None, domain=None,
+              domain_box=None, goes_domain=None):
     """
     Query the AWS database for user-requested GOES 16 data and download to
     specified path. Corrects the wavelength issue in the AWS versus AWIPS
@@ -46,29 +71,35 @@ def grab_data(start_time, end_time, local_path=None, bands=None, glm=None, domai
 
     Parameters
     ----------
-    start_time : int
+    start_time : string
         Initial time for data. Form is YYYYMMDD/HH
-    end_time : int
+    end_time : string
         End time for data. Form is YYYYMMDD/HH
-    local_path : str
-        Path to download files to. Defaults to pwd.
 
     Other Parameters
     ----------------
+    local_path : string
+        Path to download files to. If not specified, creates a director in the PWD called
+        DATA_YYYmmdd_HHMM
     bands : str or ints
         Listing of ABI bands to download. Form is 1,2,3...,16 or all
     glm : bool
         Whether to download GLM data. If so, set to True
-    domain : str
+    domain : string
         String corresponding to a key in the mapinfo.py domains dictionary
-    domain_box : str
+    domain_box : string
         String in the form 'LonW LatS LonE LatN'
+    goes_domain : string
+        [econus | emeso-1 | emeso-2 | wconus | wmeso-1 | wmeso-2]
+
+    **NOTE** For WES cases, the full domains must be downloaded (i.e. do not specify
+    domain or domain_box).
 
     """
     fs = s3fs.S3FileSystem(anon=True)
+    if not goes_domain: goes_domain = 'econus'
 
-    # If no local path specified in args, create a directory based on the
-    # current time.
+    # If no local path specified in args, create a directory based on the current time.
     if not local_path:
         curr_date = datetime.strftime(datetime.now(), '%Y%m%d-%H%M')
         local_path = os.environ['PWD'] + '/DATA_' + curr_date
@@ -108,9 +139,9 @@ def grab_data(start_time, end_time, local_path=None, bands=None, glm=None, domai
     if glm in ['true', 'True', 't', 'T']: band_names.append('LCFA')
 
     # Loop through the data structure and find file names
-    head1 = 'noaa-goes16/ABI-L2-CMIPC/'
-    head2 = 'noaa-goes16/GLM-L2-LCFA/'
-
+    META = metadata[goes_domain]
+    head1 = "noaa-goes%s/ABI-L2-CMIP%s/" % (META['sat_num'], META['domain'][0])
+    head2 = "noaa-goes16/GLM-L2-LCFA/"
     files = []
     for hr in range(0, n_hours):
         tail = time_dict['years'][hr] + '/' + time_dict['jdays'][hr] + '/' + \
@@ -126,21 +157,21 @@ def grab_data(start_time, end_time, local_path=None, bands=None, glm=None, domai
     for band in band_names:
         for f in files:
             if f.find(band) > 0:
-                idx = f.index('OR_')
-                fname = f[idx:]
+                idx = f.find("OR_ABI-L2-CMIP%s-" % (META['domain']))
+                #idx = f.index("OR_")
+                if idx > 0:
+                    fname = f[idx:]
+                    # Grab all the scan time strings following the regex pattern & convert
+                    # to datetime objects. We're ignoring the last digit which is the
+                    # tenth of a second.
+                    scan_string = re.findall(regex_str, f)[0][0:-1]
+                    scan_dt = datetime.strptime(scan_string, '%Y%j%H%M%S')
 
-                # Grab all the scan time strings following the regex pattern and convert
-                # to datetime objects. We're ignoring the last digit which is the tenth of
-                # a second.
-                scan_string = re.findall(regex_str, f)[0][0:-1]
-                scan_dt = datetime.strptime(scan_string, '%Y%j%H%M%S')
+                    if dt_start <= scan_dt <= dt_end:
+                        downloads[f] = local_path + '/' + fname
+                        download_size += fs.info(f)['size']
 
-                if dt_start <= scan_dt <= dt_end:
-                    downloads[f] = local_path + '/' + fname
-                    download_size += fs.info(f)['size']
-
-    # Query user if they'd like to continue with this download based on expected
-    # download size
+    # Query user if they'd like to continue based on expected download size
     for key in downloads.keys():
         idx = key.index('OR_')
     print("==>Number of requested files: ", len(downloads.keys()))
@@ -156,7 +187,6 @@ def grab_data(start_time, end_time, local_path=None, bands=None, glm=None, domai
         domain_boxes = [domain_box for i in range(len(list(downloads.keys())))]
         domains = [None for i in range(len(list(downloads.keys())))]
 
-    # Continue on to download step?
     if resp in ['y', 'Y', 'yes']:
         timeit = datetime.now()
         with Pool(8) as pool:
@@ -175,7 +205,22 @@ def grab_data(start_time, end_time, local_path=None, bands=None, glm=None, domai
 
 def download_aws(url, filename, domain, dbox):
     """
-    Perform downloading of netCDF files
+    Perform downloading of netCDF files from AWS
+
+    Parameters
+    ----------
+    url : string
+        Full URL to online netcdf file
+    filename : string
+        Path and name to store on local system
+
+    Other Parameters
+    ----------------
+    domain : string
+        String corresponding to a key in the mapinfo.py domains dictionary
+    domain_box : string
+        String in the form 'LonW LatS LonE LatN'
+
     """
     fs = s3fs.S3FileSystem(anon=True)
     print("Downloading: ", filename)
@@ -187,12 +232,14 @@ def download_aws(url, filename, domain, dbox):
     #    arg = './fix_wavelengths.py -f %s' % (downloads[f])
     #    call(arg, shell=True)
 
+    reduce = False
     if domain is not None:
         arg = "./domain_reduce.py -d %s -f %s" % (domain, filename)
-    else:
+        reduce = True
+    elif dbox is not None:
         arg = "./domain_reduce.py -dbox '%s' -f %s" % (dbox, filename)
-    call(arg, shell=True)
-
+        reduce = True
+    if reduce: call(arg, shell=True)
 
 def grab_data_goes_N(start_time, end_time, local_path=None, domain=None, domain_box=None):
     """
@@ -200,12 +247,13 @@ def grab_data_goes_N(start_time, end_time, local_path=None, domain=None, domain_
 
     Parameters
     ----------
-    start_time : int
+    start_time : string
         Initial time for data. Form is YYYYMMDD/HH
-    end_time : int
+    end_time : string
         End time for data. Form is YYYYMMDD/HH
-    local_path : str
+    local_path : string
         Path to download files to. Defaults to pwd.
+
     """
     base = "https://www.ncei.noaa.gov/data/gridsat-goes/access/conus"
 
@@ -227,24 +275,25 @@ def grab_data_goes_N(start_time, end_time, local_path=None, domain=None, domain_
     while dt <= dt_end:
         fname = "GridSat-CONUS.goes13.%s.v01.nc" % (dt.strftime('%Y.%m.%d.%H%M'))
         url = "%s/%s/%s/%s" % (base, str(dt.year), str(dt.month).zfill(2), fname)
-        try:
-            if WGET:
-                p = Popen([WGET, '-O', '%s/%s' % (local_path, fname), url])
-            elif CURL:
-                p = Popen([CURL, '-o', '%s/%s' % (local_path, fname), url], stderr=PIPE)
-            p.wait()
-        except:
-            pass
+        #try:
+        if WGET:
+            p = Popen([WGET, '-O', '%s/%s' % (local_path, fname), url])
+        elif CURL:
+            p = Popen([CURL, '-o', '%s/%s' % (local_path, fname), url], stderr=PIPE)
+        p.wait()
+        #except:
+        #    pass
         dt += timedelta(minutes=15)
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('start_time', help="First scan time [YYYY-MM-DD/HHmm]")
     ap.add_argument('end_time', help="Last scan time [YYYY-MM-DD/HHmm]")
-    ap.add_argument('-p', '--local-path', dest='local_path', help="Path to store netCDF files")
-    ap.add_argument('-b', '--bands', dest='bands', help="ABI bands 1,2,3,...,16, all (separated by commas)")
+    ap.add_argument('-p', '--local-path', dest='local_path', help="Path to store files")
+    ap.add_argument('-b', '--bands', dest='bands', help="ABI bands 1,2,3,...,16, all")
     ap.add_argument('-g', '--glm', dest='glm', help="[True]. Include GLM data")
-    ap.add_argument('-d', '--domain', dest='domain', help="Reduce to a user-specified domain")
+    ap.add_argument('-G', '--goes_domain', dest='goes_domain', help="econus,wconus,emeso-1,emeso-2,wmeso-1,wmeso-2")
+    ap.add_argument('-d', '--domain', dest='domain', help="Reduce to a domain")
     ap.add_argument('-dbox', '--domain-box', dest='domain_box', help="LonW LatS LonE LatN")
     args = ap.parse_args()
     np.seterr(all='ignore')
@@ -256,7 +305,6 @@ def main():
     except:
         print("**Error: Badly formatted start and/or end times. Exiting**\n")
         sys.exit(1)
-
 
     epoch = datetime(2017, 3, 1, 0, 0)
 
@@ -271,14 +319,15 @@ def main():
     # GOES-R
     elif start >= epoch:
         if args.bands is not None or args.glm is not None:
-            grab_data(args.start_time,
-                      args.end_time,
-                      local_path=args.local_path,
-                      bands=args.bands,
-                      glm=args.glm,
-                      domain=args.domain,
-                      domain_box=args.domain_box
-                      )
+            get_data_aws(args.start_time,
+                         args.end_time,
+                         local_path=args.local_path,
+                         bands=args.bands,
+                         glm=args.glm,
+                         domain=args.domain,
+                         domain_box=args.domain_box,
+                         goes_domain=args.goes_domain
+                         )
         else:
             print("**Error: No ABI bands or GLM data to download.**")
             sys.exit(1)
