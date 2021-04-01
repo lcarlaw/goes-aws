@@ -3,6 +3,8 @@ Repository to automate downloading of GOES-16/17 data for general use or in AWIP
 
 This README is specifically built out from an end-to-end test performed for a convective WES case.
 
+![](https://raw.githubusercontent.com/lcarlaw/goes-aws/master/GOESdata.png)
+
 ## Setup Notes
 ### Initial environment creation
 
