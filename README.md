@@ -37,20 +37,20 @@ The following will download all 16 channels from the GOES-16 ABI archive on the 
 
 Upload this data to Google Drive.
 
-* To Do
+#### To Dos:
 - Get local/limited domains working (likely an issue with NaNs in the original files we had?)
 - GLM data archive
 
-### Processing data on the WES
+## Processing data on the WES
 Once the GOES netCDF files have been migrated to the WES box, follow these steps to load them into a case and convert them into AWIPS-readable hdf5 files.
 
-#### Prerequisite CMIP xml files
+### Prerequisite CMIP xml files
 On your WES-2 Bridge workstation, open a terminal window and look for the following directory: `/awips2/edex/data/utility/common_static/site/LOT/satellite/goesr/descriptions/Level2`, where XXX is your site ID (i.e. LOT). If your workstation is configured, you will see several files in this window. The important files are the CMIPCommonDescription.xml, the Channel*.xml and the GOES*Sectors.xml files. These files are included in this repo in the `./CMIP` directory.
 
-#### Restart EDEX
+### Restart EDEX
 Use WES-2 Bridge to start up the EDEX_00 instance if it is not running. It may not be a bad idea to reset EDEX if you have reprocessed a different case recently, but we have not had problems with this locally. You will need to Restart EDEX_00 if you installed a new CMIP file and will allow EDEX to read in the new configurations.
 
-#### Running RawPlay
+### Running RawPlay
 Run rawPlay6.py (or whatever is our latest version i.e. rawPlay5.py). We need to run the rawPlay6.py software with a special flag that enables the CLASS functionality which is the -c switch.  (From here on out, the process is similar as detailed in the WDTD guides on reprocessing data training.weather.gov/wdtd/tools/wes2/training.php) and select Reprocessing Guide for more details.  
 
 ```cd /w2b/util
@@ -59,7 +59,7 @@ Run rawPlay6.py (or whatever is our latest version i.e. rawPlay5.py). We need to
 
 Use the WES-2 Bridge “New Case” function (File -> NewCase). In this GUI, the case type is `Ingested Data_EDEX_00` and the data type is `Satellite`.
 
-#### Creating the case
+### Creating the case
 Copy the `satellite` directory from your test case to an actual case (Dale noted duplicates in there, we will have to check this out (both 6.93 and 6.95 for example).
 
 ```
