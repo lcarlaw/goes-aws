@@ -4,7 +4,7 @@ import numpy as np
 
 def lat_lon_reproj(file_):
     g16nc = xr.open_dataset(file_).load()
-    band_id = g16nc.band_id.values
+    #band_id = g16nc.band_id.values
 
     # Timestamp
     dt = g16nc.t.values

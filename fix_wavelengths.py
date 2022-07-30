@@ -25,7 +25,7 @@ This has been tested on Python 3+ but *should* work with Python 2 as well,
 although no guarantees are made.
 """
 
-from __future__ import print_function
+#from __future__ import print_function
 import sys
 
 import xarray as xr
@@ -88,10 +88,8 @@ def execute(filename):
     if band_id != awips_expected:
         print("====> Changing band_wavelength value from %s um to %s um" % \
               (wavelength, awips_expected))
-        ds.assign_coords(band_wavelength=awips_expected)
+        ds['band_wavelength'][0] = awips_expected
         ds.to_netcdf(filename + '.temp')
-
-        arg = '%s.temp %s' % (filename, filename)
         shutil.move(filename + '.temp', filename)
 
     return

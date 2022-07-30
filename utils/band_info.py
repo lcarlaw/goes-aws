@@ -1,3 +1,5 @@
+# These are the wavelength values that our latest verion of the WES expects for each 
+# ABI band
 band_values = {1: 0.47,
                2: 0.64,
                3: 0.87,
@@ -14,11 +16,4 @@ band_values = {1: 0.47,
                14: 11.20,
                15: 12.30,  
                16: 13.30
-}
-
-aws_values = {
-    0.47,
-    0.64,
-    0.865,
-    
 }

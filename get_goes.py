@@ -227,10 +227,8 @@ def download_aws(url, filename, domain, dbox):
     fs.get(url, filename)
 
     # Pass this file to fix_wavelengths for proper AWIPS-read in
-    #idx = f.find('ABI-L2-CMIPC')
-    #if idx > -1:
-    #    arg = './fix_wavelengths.py -f %s' % (downloads[f])
-    #    call(arg, shell=True)
+    arg = './fix_wavelengths.py -f %s' % (filename)
+    call(arg, shell=True)
 
     reduce = False
     if domain is not None:
