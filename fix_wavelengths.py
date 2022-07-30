@@ -27,7 +27,8 @@ although no guarantees are made.
 #from __future__ import print_function
 import sys
 
-import xarray as xr
+#import xarray as xr
+import h5py
 from utils.band_info import band_values
 
 import numpy as np
@@ -79,6 +80,16 @@ def execute(filename):
     Altered netCDF file.
 
     """
+
+    ds = h5py.File(filename, 'r+')
+    band_id = ds['band_id'][0]
+    wavelength = ds['band_wavelength']
+    awips_wavelength = band_values[band_id]
+    print("Changing wavelength from: ", wavelength[0], " to: ", awips_wavelength)
+    wavelength[...] = awips_wavelength
+    ds.close()
+
+    '''
     ds = xr.open_dataset(filename)
     wavelength = ds.band_wavelength.values[0]
     band_id = ds.band_id.values[0]
@@ -90,6 +101,7 @@ def execute(filename):
         ds['band_wavelength'][0] = awips_expected
         ds.to_netcdf(filename + '.temp')
         shutil.move(filename + '.temp', filename)
+    '''
 
     return
 

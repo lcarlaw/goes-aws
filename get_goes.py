@@ -227,7 +227,7 @@ def download_aws(url, filename, domain, dbox):
     fs.get(url, filename)
 
     # Pass this file to fix_wavelengths for proper AWIPS-read in
-    arg = './fix_wavelengths.py -f %s' % (filename)
+    arg = 'python fix_wavelengths.py -f %s' % (filename)
     call(arg, shell=True)
 
     reduce = False
