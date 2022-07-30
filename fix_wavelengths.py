@@ -19,7 +19,6 @@ Either a -f or -p flag is required, but not both.
 Required Libraries
 ------------------
 conda install xarray
-conda install netcdf4
 
 This has been tested on Python 3+ but *should* work with Python 2 as well,
 although no guarantees are made.

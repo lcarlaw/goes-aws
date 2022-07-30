@@ -1,11 +1,11 @@
 # get_goes.py
 #
+# NOTE: If using this to download data for processing on the WES, you cannot use the 
+# -d or -dbox flags as AWIPS expects the data arrays to be specific, pre-defined sizes.
+#
 # Useage:
 #   python get_goes.py 2020-05-23/1200 -e 2020-05-24-/0300 -p /Users/leecarlaw/satellite/20200524 -b 2,5,10 -d MW
 #   python get_goes.py YYYY-mm-dd/HHMM YYYY-mm-dd/HHMM -p /Users/leecarlaw/satellite_data/summer_wes -b all
-#
-# Output:
-#   netcdf files downloaded to -p for bands 2, 5, and 10, as well as GLM data.
 
 import sys, os
 from subprocess import call
